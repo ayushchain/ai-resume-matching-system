@@ -18,6 +18,10 @@ Ranking dashboard — 14 sample resumes ranked against the sample JD
 
 ![Ranking dashboard](docs/screenshots/dashboard.png)
 
+Ranking dashboard (continued) — all 14 candidates down to the lowest match:
+
+![Ranking dashboard continued](docs/screenshots/dashboard-bottom.png)
+
 Candidate detail — score breakdown, matched and missing skills:
 
 ![Candidate detail](docs/screenshots/candidate-detail.png)
