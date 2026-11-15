@@ -16,7 +16,7 @@ Request: `POST /api/rank` with `sample_data/sample_jd.txt` as the JD file and
 all 12 PDFs from `sample_data/resumes/`. All 12 parsed, **0 file errors**.
 
 **Semantic method used: `tfidf (fallback)`** — sentence-transformers could
-not be installed in this sandbox (pip download failed with a network
+not be installed in the test environment (pip download failed with a network
 connectivity error), so the automatic fallback activated exactly as designed
 and the API reported it in `semantic_method`. On a machine with internet,
 the same code loads `all-MiniLM-L6-v2` first.
