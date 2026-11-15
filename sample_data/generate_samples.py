@@ -1,10 +1,11 @@
-"""Generate 12 synthetic resumes (PDF) + 1 sample JD (TXT).
+"""Generate 14 synthetic resumes (12 PDF + 2 DOCX) + 1 sample JD (TXT).
 
 All people below are fictional. Run:
-    python generate_samples.py        (needs: reportlab)
-Output: resumes/*.pdf and sample_jd.txt in this folder.
+    python generate_samples.py        (needs: reportlab, python-docx)
+Output: resumes/*.pdf, resumes/*.docx and sample_jd.txt in this folder.
 """
 import os
+from docx import Document
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
@@ -97,12 +98,42 @@ def make_pdf(path, name, email, exp_line, skills, summary):
     c.save()
 
 
+DOCX_RESUMES = [
+    # name, email, exp-years-line, skills-line, summary  (numbering continues at 13)
+    ("Nikhil Bose", "nikhil.bose@example.com", "3 years of experience",
+     "Python, SQL, PostgreSQL, Git, REST API, Flask, Linux",
+     "Backend developer building Python REST APIs with Flask and PostgreSQL. Comfortable with SQL queries, Git workflows and Linux servers; learning FastAPI and Docker."),
+    ("Sara Khan", "sara.khan@example.com", "1 years of experience",
+     "JavaScript, React, HTML, CSS, Figma, Git",
+     "Frontend developer specialising in React interfaces and responsive CSS. Builds UI components from Figma designs; no backend or Python experience yet."),
+]
+
+
+def make_docx(path, name, email, exp_line, skills, summary):
+    doc = Document()
+    doc.add_heading(name, level=0)
+    doc.add_paragraph(f"Email: {email} | Phone: +91 9000000000")
+    doc.add_heading("Professional Summary", level=1)
+    doc.add_paragraph(summary)
+    doc.add_heading("Experience", level=1)
+    doc.add_paragraph(f"Software Engineer — {exp_line} in software development roles.")
+    doc.add_heading("Skills", level=1)
+    doc.add_paragraph(skills)
+    doc.add_heading("Education", level=1)
+    doc.add_paragraph("B.Tech in Computer Science")
+    doc.save(path)
+
+
 def main():
     with open(os.path.join(HERE, "sample_jd.txt"), "w") as f:
         f.write(JD)
     for i, (name, email, exp, skills, summary) in enumerate(RESUMES, 1):
         fname = f"{i:02d}_{name.replace(' ', '_')}.pdf"
         make_pdf(os.path.join(OUT, fname), name, email, exp, skills, summary)
+        print("wrote", fname)
+    for j, (name, email, exp, skills, summary) in enumerate(DOCX_RESUMES, len(RESUMES) + 1):
+        fname = f"{j:02d}_{name.replace(' ', '_')}.docx"
+        make_docx(os.path.join(OUT, fname), name, email, exp, skills, summary)
         print("wrote", fname)
     print("wrote sample_jd.txt")
 
