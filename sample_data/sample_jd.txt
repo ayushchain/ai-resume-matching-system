@@ -1,0 +1,14 @@
+Senior Backend Developer - Python (Sample JD)
+
+We are hiring a Backend Developer with 3+ years of experience building
+web applications and REST APIs.
+
+Required skills: Python, FastAPI, SQL, PostgreSQL, Docker, Git, REST API,
+Testing, Linux, Redis.
+
+Nice to have: AWS, Kubernetes, Machine Learning, Pandas, CI/CD, Kafka,
+Microservices, System Design.
+
+Qualifications: Bachelor's degree in Computer Science or a related field.
+The candidate will design microservices, write unit testing with Pytest,
+deploy with Docker on AWS, and work in an Agile team.
