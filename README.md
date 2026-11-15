@@ -52,12 +52,13 @@ resume-matching-system/
 │       ├── skills.py     # 80+ skill taxonomy + extraction
 │       └── matching.py   # semantic similarity + scoring + reasons
 ├── frontend/
+│   ├── index.html
 │   ├── package.json
 │   └── src/              # App.jsx (UI), main.jsx, styles.css
 ├── sample_data/
 │   ├── generate_samples.py   # regenerates the demo data
 │   ├── sample_jd.txt         # sample job description
-│   └── resumes/              # 12 synthetic resumes (PDF)
+│   └── resumes/              # 14 synthetic resumes (12 PDF + 2 DOCX)
 ├── docs/APPROACH.md         # technical approach & matching algorithm, in detail
 └── TEST_RESULTS.md
 ```
@@ -91,12 +92,12 @@ Open the Vite URL (usually http://localhost:5173).
 
 1. Paste the contents of `sample_data/sample_jd.txt` into the JD box
    (or upload the file).
-2. Upload all 12 PDFs from `sample_data/resumes/` in one batch.
+2. Upload all 14 resumes (12 PDF + 2 DOCX) from `sample_data/resumes/` in one batch.
 3. Click **Rank Candidates** → ranked table appears.
 4. Click **View** on any candidate → score breakdown, matched/missing
    skills, experience comparison and plain-English reasons.
 
-To regenerate the sample data: `cd sample_data && pip install reportlab && python generate_samples.py`
+To regenerate the sample data: `cd sample_data && pip install reportlab python-docx && python generate_samples.py`
 
 ## Matching algorithm & scoring methodology
 
