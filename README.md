@@ -58,7 +58,7 @@ resume-matching-system/
 │   ├── generate_samples.py   # regenerates the demo data
 │   ├── sample_jd.txt         # sample job description
 │   └── resumes/              # 12 synthetic resumes (PDF)
-├── docs/INTERVIEW_EXPLAINER.md
+├── docs/APPROACH.md         # technical approach & matching algorithm, in detail
 └── TEST_RESULTS.md
 ```
 
