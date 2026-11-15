@@ -11,6 +11,23 @@ real candidate information.
 
 ---
 
+## Screenshots
+
+Ranking dashboard — 14 sample resumes ranked against the sample JD
+(semantic method: sentence-transformers):
+
+![Ranking dashboard](docs/screenshots/dashboard.png)
+
+Candidate detail — score breakdown, matched and missing skills:
+
+![Candidate detail](docs/screenshots/candidate-detail.png)
+
+Score explanation — why this score, in plain words:
+
+![Score explanation](docs/screenshots/score-explanation.png)
+
+---
+
 ## Tech stack
 
 | Layer | Choice |
@@ -59,7 +76,9 @@ resume-matching-system/
 │   ├── generate_samples.py   # regenerates the demo data
 │   ├── sample_jd.txt         # sample job description
 │   └── resumes/              # 14 synthetic resumes (12 PDF + 2 DOCX)
-├── docs/APPROACH.md         # technical approach & matching algorithm, in detail
+├── docs/
+│   ├── APPROACH.md       # technical approach & matching algorithm, in detail
+│   └── screenshots/      # dashboard + candidate detail screenshots
 └── TEST_RESULTS.md
 ```
 
