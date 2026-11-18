@@ -15,12 +15,16 @@ an explainable score for every candidate.
 2. **Resume parsing** — each uploaded PDF/DOCX is converted to text
    (PyMuPDF for PDF, python-docx for DOCX). Name, email, phone, education,
    skills and total years of experience are extracted with regex and simple
-   heuristics ("X years of experience" first, then date ranges).
+   heuristics ("X years of experience" first, then date ranges — including
+   month-year ranges such as "Jan 2020 – Mar 2023" or "Jun 2021 to
+   Present", with overlapping ranges merged so shared months count once).
 3. **Matching** — every resume is scored against the JD on three components
    (below) and the results are sorted into the ranking dashboard.
 4. **Explanation** — for each candidate the API returns the three component
    scores, matched and missing skills, the experience comparison, and
    plain-English reasons generated from those components.
+5. **History** — the finished run is saved (next section), so a recruiter
+   can reopen past rankings from the dashboard's *Past runs* section.
 
 ## Matching algorithm
 ```
@@ -46,9 +50,15 @@ experience bar is not rejected outright. All weights are constants in
 `backend/app/matching.py`, so they can be tuned per role family.
 
 ## Design choices
-- **Stateless API** — parsing and scoring happen in one request; nothing is
-  stored, which keeps the prototype simple and avoids holding candidate
-  data. PostgreSQL persistence is the documented next step.
+- **SQLite persistence** — parsing and scoring happen in one request, and
+  the finished run is then written to a local SQLite database
+  (`backend/data/runs.db`) using only Python's stdlib `sqlite3` — no extra
+  dependency. What is stored is the JD summary (skills, required years),
+  the method used, and each candidate's name, component scores and years;
+  the uploaded resume files themselves are not retained. Past runs are
+  served by `GET /api/history` and shown in the dashboard. Saving is
+  best-effort: if the write fails, the ranking response is unaffected.
+  PostgreSQL remains the production path for shared, backed-up history.
 - **Per-file error isolation** — one unreadable file in a batch is reported
   in an error list and does not fail the other resumes.
 - **Fallback by design** — if the transformer model is unavailable, the
