@@ -1,6 +1,7 @@
 """Resume / JD parsing: file -> text, then text -> structured fields."""
 import io
 import re
+from datetime import date
 
 import fitz  # PyMuPDF
 from docx import Document
@@ -9,6 +10,25 @@ from .skills import extract_skills
 
 EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
 PHONE_RE = re.compile(r"(\+?\d[\d\s\-()]{8,}\d)")
+
+_MONTHS = {
+    "jan": 1, "january": 1, "feb": 2, "february": 2, "mar": 3, "march": 3,
+    "apr": 4, "april": 4, "may": 5, "jun": 6, "june": 6, "jul": 7, "july": 7,
+    "aug": 8, "august": 8, "sep": 9, "sept": 9, "september": 9, "oct": 10,
+    "october": 10, "nov": 11, "november": 11, "dec": 12, "december": 12,
+}
+_MONTH_RE = (r"(january|february|march|april|june|july|august|september|"
+             r"october|november|december|"
+             r"jan|feb|mar|apr|may|jun|jul|aug|sept|sep|oct|nov|dec)")
+# One date range: [Month] YYYY <sep> ([Month] YYYY | Present), sep = -, –, —, "to"
+_RANGE_RE = re.compile(
+    rf"(?:{_MONTH_RE}\s+)?(20\d{{2}})\s*(?:[-–—]|to)\s*"
+    rf"(?:(?:{_MONTH_RE}\s+)?(20\d{{2}})|(present|current|now))")
+
+
+def _month_index(year: int, month: int) -> int:
+    """Absolute month number, so date spans can be subtracted and merged."""
+    return year * 12 + (month - 1)
 
 
 def extract_text(filename: str, data: bytes) -> str:
@@ -45,7 +65,10 @@ def extract_experience_years(text: str) -> float:
 
     Strategy (simple + explainable):
     1. Explicit 'X years of experience' / 'X+ years' -> take the largest.
-    2. Else date ranges like 2021 - 2024 / 2020-Present -> sum the spans.
+    2. Else date ranges -> sum the spans. Ranges may be year-only
+       ('2019 - 2022') or month-year ('Jan 2020 - Mar 2023',
+       'Jun 2021 to Present'); 'Present' counts up to today.
+       Overlapping ranges are merged, so shared months count once.
     3. Else 0.
     """
     low = text.lower()
@@ -54,14 +77,31 @@ def extract_experience_years(text: str) -> float:
     if explicit:
         return max(explicit)
 
-    total = 0.0
-    current_year = 2026
-    for start, end in re.findall(r"(20\d{2})\s*[-–to]+\s*(20\d{2}|present|current|now)", low):
-        s = int(start)
-        e = current_year if end in ("present", "current", "now") else int(end)
-        if e >= s:
-            total += (e - s)
-    return round(total, 1)
+    # Work in absolute month numbers. Precision follows the input: a
+    # year-only date means January of that year, so '2019 - 2022' is
+    # exactly 3.0 years, as before.
+    today = date.today()
+    spans = []
+    for m_start, y_start, m_end, y_end, present in _RANGE_RE.findall(low):
+        start = _month_index(int(y_start), _MONTHS[m_start] if m_start else 1)
+        if present:
+            end = _month_index(today.year, today.month if m_start else 1)
+        else:
+            end = _month_index(int(y_end), _MONTHS[m_end] if m_end else 1)
+        if end > start:
+            spans.append((start, end))
+    if not spans:
+        return 0.0
+    spans.sort()
+    total_months, cur_s, cur_e = 0, spans[0][0], spans[0][1]
+    for s, e in spans[1:]:
+        if s <= cur_e:  # overlapping or touching: extend the current span
+            cur_e = max(cur_e, e)
+        else:
+            total_months += cur_e - cur_s
+            cur_s, cur_e = s, e
+    total_months += cur_e - cur_s
+    return round(total_months / 12, 1)
 
 
 def extract_required_years(jd_text: str) -> float:

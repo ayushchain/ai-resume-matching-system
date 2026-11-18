@@ -2,11 +2,16 @@
 
 Run:  uvicorn app.main:app --reload --port 8000   (from backend/)
 """
-from fastapi import FastAPI, File, Form, UploadFile
+import logging
+
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
+from . import store
 from .matching import score_candidate, semantic_scores
 from .parsers import extract_text, parse_candidate, parse_jd
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Resume Matching & Candidate Ranking System", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -61,7 +66,16 @@ async def rank(jd_text: str = Form(default=""), jd_file: UploadFile | None = Fil
     for i, r in enumerate(results, start=1):
         r["rank"] = i
 
+    # Persist the run for /api/history. Storage is best-effort only: a
+    # failure here must never break the ranking response.
+    run_id = None
+    try:
+        run_id = store.save_run(jd, method, results)
+    except Exception as exc:
+        logger.warning("Could not save ranking run to history: %s", exc)
+
     return {
+        "run_id": run_id,
         "semantic_method": method,
         "jd_summary": {"skills": jd["skills"], "required_years": jd["required_years"],
                        "qualifications": jd["qualifications"]},
@@ -69,3 +83,18 @@ async def rank(jd_text: str = Form(default=""), jd_file: UploadFile | None = Fil
         "results": results,
         "file_errors": errors,
     }
+
+
+@app.get("/api/history")
+def history():
+    """Most recent saved ranking runs, newest first."""
+    return {"runs": store.list_runs()}
+
+
+@app.get("/api/history/{run_id}")
+def history_run(run_id: int):
+    """Full stored results for one past run."""
+    run = store.get_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return run
