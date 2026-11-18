@@ -157,8 +157,9 @@ Semantic 93.0, Skill coverage 80.0 (16 of 20 JD skills), Experience 100
 (5 yrs vs 3 required) →
 `0.45×93.0 + 0.35×80.0 + 0.20×100 = 41.9 + 28.0 + 20.0 = 89.8`.
 In the TF-IDF fallback run (TEST_RESULTS.md §3) the same candidate scores
-74.7 — the ranking order is identical; only the semantic component differs,
-because TF-IDF matches words while the transformer matches meaning.
+74.7. The top and bottom candidates are the same in both runs; a few
+mid-table candidates swap places, because TF-IDF matches words while the
+transformer matches meaning.
 
 Every candidate response also carries human-readable **reasons** generated
 from these three components, so a recruiter (and the candidate in an
