@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const API = 'http://localhost:8000'
 
@@ -17,6 +17,25 @@ function Chips({ items, cls }) {
   return <div className="chips">{items.map(s => <span key={s} className={`chip ${cls}`}>{s}</span>)}</div>
 }
 
+function RankingTable({ results, onView }) {
+  return (
+    <table>
+      <thead><tr><th>#</th><th>Candidate</th><th>Experience</th><th>Match %</th><th>Matched Skills</th>{onView && <th></th>}</tr></thead>
+      <tbody>
+        {results.map(r => (
+          <tr key={r.rank}>
+            <td>{r.rank}</td><td>{r.name}{r.file_name && <div className="muted small">{r.file_name}</div>}</td>
+            <td>{r.experience_years} yrs</td>
+            <td><b className={r.scores.overall >= 70 ? 'good' : r.scores.overall >= 45 ? 'mid' : 'low'}>{r.scores.overall}%</b></td>
+            <td>{r.matched_skills?.join(', ') || '—'}</td>
+            {onView && <td><button onClick={() => onView(r)}>View</button></td>}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
 export default function App() {
   const [jdText, setJdText] = useState('')
   const [jdFile, setJdFile] = useState(null)
@@ -25,6 +44,35 @@ export default function App() {
   const [selected, setSelected] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [runs, setRuns] = useState([])
+  const [pastRun, setPastRun] = useState(null)
+
+  async function loadHistory() {
+    try {
+      const res = await fetch(`${API}/api/history`)
+      const json = await res.json()
+      setRuns(json.runs || [])
+    } catch { /* history is optional — ignore if the backend is down */ }
+  }
+
+  useEffect(() => { loadHistory() }, [])
+
+  async function viewRun(id) {
+    try {
+      const res = await fetch(`${API}/api/history/${id}`)
+      const json = await res.json()
+      if (!json.error) {
+        // Map stored rows onto the ranking-table shape (read-only view).
+        setPastRun({
+          ...json,
+          results: json.results.map(r => ({
+            rank: r.rank, name: r.name, experience_years: r.years, matched_skills: null,
+            scores: { overall: r.overall, semantic: r.semantic, skill_coverage: r.skill_coverage, experience: r.experience_score },
+          })),
+        })
+      }
+    } catch { /* ignore */ }
+  }
 
   async function runRanking() {
     setError(''); setLoading(true); setSelected(null)
@@ -35,7 +83,7 @@ export default function App() {
       files.forEach(f => fd.append('resumes', f))
       const res = await fetch(`${API}/api/rank`, { method: 'POST', body: fd })
       const json = await res.json()
-      if (json.error) setError(json.error); else setData(json)
+      if (json.error) setError(json.error); else { setData(json); loadHistory() }
     } catch { setError('Could not reach the backend. Is it running on port 8000?') }
     setLoading(false)
   }
@@ -77,20 +125,32 @@ export default function App() {
             {data.total_candidates} candidates · JD skills detected: {data.jd_summary.skills.join(', ') || 'none'} ·
             Required experience: {data.jd_summary.required_years} years · Semantic method: <b>{data.semantic_method}</b>
           </p>
-          <table>
-            <thead><tr><th>#</th><th>Candidate</th><th>Experience</th><th>Match %</th><th>Matched Skills</th><th></th></tr></thead>
-            <tbody>
-              {data.results.map(r => (
-                <tr key={r.rank}>
-                  <td>{r.rank}</td><td>{r.name}<div className="muted small">{r.file_name}</div></td>
-                  <td>{r.experience_years} yrs</td>
-                  <td><b className={r.scores.overall >= 70 ? 'good' : r.scores.overall >= 45 ? 'mid' : 'low'}>{r.scores.overall}%</b></td>
-                  <td>{r.matched_skills.join(', ') || '—'}</td>
-                  <td><button onClick={() => setSelected(r)}>View</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <RankingTable results={data.results} onView={setSelected} />
+        </section>
+      )}
+
+      {runs.length > 0 && (
+        <section className="card">
+          <h2>Past runs</h2>
+          <p className="muted">Saved rankings from this device — click one to view its stored results.</p>
+          {runs.map(run => (
+            <button key={run.id} className="run-item" onClick={() => viewRun(run.id)}>
+              <span>{new Date(run.created_at).toLocaleString()} · {run.candidate_count} candidates · {run.semantic_method}</span>
+              <span>Top: <b>{run.top_candidate}</b> ({run.top_score}%)</span>
+            </button>
+          ))}
+        </section>
+      )}
+
+      {pastRun && (
+        <section className="card">
+          <h2>Past run — {new Date(pastRun.created_at).toLocaleString()}</h2>
+          <p className="muted">
+            {pastRun.candidate_count} candidates · JD skills detected: {pastRun.jd_skills.join(', ') || 'none'} ·
+            Required experience: {pastRun.required_years} years · Semantic method: <b>{pastRun.semantic_method}</b>
+          </p>
+          <RankingTable results={pastRun.results} />
+          <button onClick={() => setPastRun(null)}>Close</button>
         </section>
       )}
 
