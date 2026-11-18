@@ -59,6 +59,7 @@ flowchart LR
     P --> M[matching.py<br/>semantic + skill + experience<br/>→ overall score + reasons]
     JD --> M
     M -->|ranked JSON| FE
+    M -->|save run| DB[(SQLite — store.py<br/>run history via /api/history)]
 ```
 
 ## Folder structure
@@ -150,10 +151,14 @@ For every resume, three component scores (each 0–100) are computed:
 Overall = 0.45 × Semantic + 0.35 × Skill Coverage + 0.20 × Experience
 ```
 
-**Worked example** (top candidate from the real test run in TEST_RESULTS.md):
-Semantic 59.3, Skill coverage 80.0 (16 of 20 JD skills), Experience 100
+**Worked example** (top candidate from the Sentence Transformers test run,
+TEST_RESULTS.md §7 — the same run shown in the screenshots above):
+Semantic 93.0, Skill coverage 80.0 (16 of 20 JD skills), Experience 100
 (5 yrs vs 3 required) →
-`0.45×59.3 + 0.35×80.0 + 0.20×100 = 26.7 + 28.0 + 20.0 = 74.7`.
+`0.45×93.0 + 0.35×80.0 + 0.20×100 = 41.9 + 28.0 + 20.0 = 89.8`.
+In the TF-IDF fallback run (TEST_RESULTS.md §3) the same candidate scores
+74.7 — the ranking order is identical; only the semantic component differs,
+because TF-IDF matches words while the transformer matches meaning.
 
 Every candidate response also carries human-readable **reasons** generated
 from these three components, so a recruiter (and the candidate in an
