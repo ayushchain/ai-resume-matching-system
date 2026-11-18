@@ -74,7 +74,12 @@ The two DOCX files ranked sensibly, exactly as designed:
 Note: the PDF candidates' scores shift very slightly versus section 3
 (e.g. Aarav Sharma 74.7 → 74.8) because TF-IDF weights are computed over
 the whole uploaded batch, which now contains 14 documents instead of 12.
-The ranking order of the original 12 is unchanged.
+The ranking order of the original 12 is unchanged. For clarity: the
+74.7 / 6.6 TF-IDF figures quoted in summaries of this project refer to
+the section-3 run (12 resumes); in this 14-file TF-IDF run the same
+candidates shift slightly (e.g. Aarav 74.8), and the full 14-file TF-IDF
+table is not tabulated here because the transformer run in section 7 is
+the headline result.
 
 ## 7. Sentence Transformers run — real model, all 14 resumes
 `sentence-transformers` 6.3.0 was installed and the model
