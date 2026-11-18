@@ -109,3 +109,49 @@ candidates swap places. The scoring formula, skill coverage, experience
 scores and ranking logic are exactly the same, and the top and bottom of
 the table are unchanged — the specialist is still #1 and the fresher is
 still last. This is the run shown in the README screenshots.
+
+## 8. Fix round 2 — persistence, stronger date parsing, unit tests (2026-11-18)
+
+Three gaps from the senior-HR audit were closed, without touching the
+scoring formula or any number in sections 1–7:
+
+**a) Database persistence (was: stateless / in-memory).** New module
+`backend/app/store.py` uses only the stdlib `sqlite3`. Every
+`POST /api/rank` now saves its run (JD skills, required years, method,
+candidate count) and per-candidate results to `backend/data/runs.db`
+(best-effort: a storage failure cannot break the ranking response).
+New endpoints: `GET /api/history` (recent runs with top candidate) and
+`GET /api/history/{run_id}` (full stored ranking). The dashboard gained
+a *Past runs* section that lists saved runs and reopens a stored ranking
+read-only. Only scores and extracted fields are stored — not the
+uploaded resume files.
+
+**b) Stronger experience parsing.** `extract_experience_years` now also
+understands month-year ranges — "Jan 2020 – Mar 2023" → 3.2,
+"January 2019 - Present" → counts up to the current month,
+"Jun 2021 to Present" → 5.4 (as of Nov 2026) — and merges overlapping
+ranges so shared months are not double-counted. The explicit
+"X years of experience" path still takes priority, and year-only ranges
+keep their previous whole-year values. **Before/after check on all 14
+sample resumes: extracted years unchanged for every file** (5, 4, 3, 3,
+2, 4, 6, 3, 2, 1, 5, 0, 3, 1 — identical to the Years column above).
+
+**c) Unit tests.** `backend/tests/` (pytest-style, plain asserts; also
+runnable via `python tests/run_all.py`): skill extraction incl. aliases
+and the Java/JavaScript word-boundary case, experience parsing
+(explicit years, month-year ranges, Present, overlap merging), the
+scoring formula (both worked examples: 93.0/80/100 → 89.8 and
+59.3/80/100 → 74.7), and the store (save a run, read history back).
+**Result: 20 passed, 0 failed** under pytest, and 20 passed via the
+standalone runner.
+
+**Regression — full batch re-run after all changes.** Sample JD + all 14
+resumes against the live backend: **14 parsed, 0 file errors**, semantic
+method `sentence-transformers (all-MiniLM-L6-v2)`, and the ranking is
+**identical to section 7 in every row** — overall, semantic, skill
+coverage, experience score and years all match, from Aarav Sharma 89.8
+at rank 1 to Meera Joshi 30.1 at rank 14. History check: the run was
+saved (id 1), `GET /api/history` returned it with top candidate
+"Aarav Sharma, 89.8", `GET /api/history/1` returned all 14 stored rows
+matching the live ranking, and an unknown id returns HTTP 404.
+Frontend: `npm run build` ✅ (31 modules, dist JS 149.26 kB).

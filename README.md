@@ -41,7 +41,7 @@ Score explanation — why this score, in plain words:
 | Semantic AI | Sentence Transformers `all-MiniLM-L6-v2` **with automatic TF-IDF fallback** (scikit-learn) |
 | Skill extraction | Curated skill taxonomy (80+ skills) in `backend/app/skills.py` |
 | Parsing | PyMuPDF (PDF), python-docx (DOCX) |
-| Storage | In-memory for the prototype (stateless API — see *Future improvements* for PostgreSQL/MongoDB) |
+| Storage | SQLite via Python's stdlib `sqlite3` — every ranking run is saved to `backend/data/runs.db` and can be reviewed through `/api/history` (PostgreSQL is the production path) |
 
 > **Why the fallback matters:** if the transformer model cannot be downloaded
 > (offline machine, blocked network), the system automatically switches to
@@ -67,11 +67,13 @@ flowchart LR
 resume-matching-system/
 ├── backend/
 │   ├── requirements.txt
+│   ├── tests/            # unit tests (pytest, or tests/run_all.py)
 │   └── app/
-│       ├── main.py       # API endpoints (/api/health, /api/jd/analyze, /api/rank)
+│       ├── main.py       # API endpoints (/api/health, /api/jd/analyze, /api/rank, /api/history)
 │       ├── parsers.py    # file→text, candidate/JD field extraction
 │       ├── skills.py     # 80+ skill taxonomy + extraction
-│       └── matching.py   # semantic similarity + scoring + reasons
+│       ├── matching.py   # semantic similarity + scoring + reasons
+│       └── store.py      # SQLite persistence of ranking runs (stdlib sqlite3)
 ├── frontend/
 │   ├── index.html
 │   ├── package.json
@@ -163,7 +165,9 @@ interview) can see exactly *why* the score is what it is — no black box.
 |---|---|---|
 | GET | `/api/health` | Health check |
 | POST | `/api/jd/analyze` | Form fields: `jd_text` **or** `jd_file` → extracted skills, required years, qualifications |
-| POST | `/api/rank` | Form fields: `jd_text`/`jd_file` + `resumes` (multiple files, PDF/DOCX/TXT) → ranked candidates with full detail + `semantic_method` used |
+| POST | `/api/rank` | Form fields: `jd_text`/`jd_file` + `resumes` (multiple files, PDF/DOCX/TXT) → ranked candidates with full detail + `semantic_method` used; the run is also saved to the history |
+| GET | `/api/history` | Most recent saved runs (time, candidate count, method, top candidate + score) |
+| GET | `/api/history/{run_id}` | One saved run with its full ranked results |
 
 ## Limitations
 
@@ -173,12 +177,15 @@ interview) can see exactly *why* the score is what it is — no black box.
   ranges); unusual resume layouts can be misread.
 - Semantic scores are rescaled (cosine × ~130–140, clamped 0–100) so they
   spread readably; the *ranking* is unaffected by the scaling.
-- Prototype is stateless/in-memory — results are not persisted.
+- Run history lives in a local SQLite file (`backend/data/runs.db`) —
+  right for a single-user prototype, but not shared between machines or
+  backed up. Only scores and extracted fields are stored, not the
+  uploaded resume files themselves.
 
 ## Future improvements
 
-- Persist JDs, resumes and results in PostgreSQL (or MongoDB) with a
-  recruiter login and saved ranking history.
+- Move persistence from SQLite to PostgreSQL (or MongoDB) with a
+  recruiter login, so ranking history is shared and backed up.
 - Add spaCy NER for name/organisation extraction and a larger, learned
   skill ontology; fine-tune weights per role family.
 - Bias/fairness checks (score must never use name, gender or college).
